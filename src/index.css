@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+.sf-select {
+    appearance: none; /* Disable the default arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 10px 35px 10px 10px;
+    font-size: 16px;
+    border-radius: 8px; /* ทำให้มลขึ้น */
+    border: 1px solid #d1d5db; /* สีเทาอ่อน */
+    background-color: #fff;
+    background-image: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* เงาเล็กๆ ทำให้ดูนุ่ม */
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sf-select:focus {
+    outline: none;
+    border-color: #34d399; /* สีเขียวเมื่อโฟกัส */
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3);
+}
+
+.recharts-layer {
+    font-size: 14px;
+}
