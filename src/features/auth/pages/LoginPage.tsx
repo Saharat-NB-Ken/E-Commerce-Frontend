@@ -13,8 +13,6 @@ export const LoginPage = () => {
     const setUser = useUserStore((state) => state.setUser);
     const navigate = useNavigate();
     const location = useLocation();
-
-    // ✅ รับข้อความ success จาก RegisterPage
     const successMessage = location.state?.message;
 
     const handleSubmit = async (e: React.FormEvent) => {
