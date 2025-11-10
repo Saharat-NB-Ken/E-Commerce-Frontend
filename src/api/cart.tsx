@@ -76,10 +76,16 @@ export const cartService = {
 
         const existing = cart.items.find((ci) => ci.productId === item.productId);
         if (item.quantity > 1) {
-            return await cartService.addItem({ productId: Number(existing?.productId), quantity: item.quantity });
+            console.log("3554454465");
+            console.log("productid bbbbb", existing?.productId);
+
+            return await cartService.addItem({ productId: Number(item.productId), quantity: item.quantity });
         }
         if (existing) {
             // ถ้ามีแล้ว → เพิ่มจำนวน
+            console.log("1234567890");
+            console.log("productid vvvv", existing?.productId);
+
             return await cartService.incrementQuantity(existing.cartItem_id, item.quantity);
         } else {
             // ถ้าไม่มี → สร้างใหม่

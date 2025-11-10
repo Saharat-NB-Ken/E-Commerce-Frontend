@@ -3,20 +3,43 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Loader2, Tag } from "lucide-react";
 import { api } from "../../../api/fetch";
 import AdminLayout from "../components/managementLayout";
+import { AdminModal } from "../components/adminModal";
 
 interface Category {
   id?: number;
   name: string;
 }
 
-export const CategoryFormPage = () => {
-  const { id } = useParams(); 
+export function CategoryFormPage() {
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<Category>({ name: "" });
   const [loading, setLoading] = useState(false);
 
-  // โหลดข้อมูลมาใส่ถ้าเป็น update
+  const [modal, setModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    type: "success" as "success" | "error" | "confirm",
+    onConfirm: () => {},
+  });
+
+  function openModal(
+    title: string,
+    message: string,
+    type: "success" | "error" | "confirm" = "success",
+    onConfirm?: () => void
+  ) {
+    setModal({
+      open: true,
+      title,
+      message,
+      type,
+      onConfirm: onConfirm || (() => setModal((m) => ({ ...m, open: false }))),
+    });
+  }
+
   useEffect(() => {
     if (id) {
       (async () => {
@@ -26,7 +49,7 @@ export const CategoryFormPage = () => {
           setForm(res as Category);
         } catch (err) {
           console.error(err);
-          alert("Failed to load category");
+          openModal("Error", "Failed to load category", "error");
         } finally {
           setLoading(false);
         }
@@ -34,29 +57,32 @@ export const CategoryFormPage = () => {
     }
   }, [id]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
       setLoading(true);
       if (id) {
-        await api.patch(`/categories/${id}`, form);
-        alert("Category updated successfully");
+        await api.patch(`/categories/${id}`, { name: form.name });
+        openModal("Success", "Category updated successfully", "success", () =>
+          navigate("/category-listing")
+        );
       } else {
         await api.post("/categories", form);
-        alert("Category created successfully");
+        openModal("Success", "Category created successfully", "success", () =>
+          navigate("/category-listing")
+        );
       }
-      navigate("/category-listing");
     } catch (err) {
       console.error(err);
-      alert("Failed to save category");
+      openModal("Error", "Failed to save category", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
 
   return (
     <AdminLayout>
@@ -105,6 +131,15 @@ export const CategoryFormPage = () => {
           </div>
         </div>
       </div>
+
+      <AdminModal
+        open={modal.open}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type as any}
+        onClose={() => setModal((m) => ({ ...m, open: false }))}
+        onConfirm={modal.onConfirm}
+      />
     </AdminLayout>
   );
-};
+}

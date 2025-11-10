@@ -19,7 +19,6 @@ export const ProductDetailPage = () => {
     const [modalMessage, setModalMessage] = useState("");
     const [stock, setStock] = useState<number | null>(null);
     const [mainImage, setMainImage] = useState<string | undefined>(undefined);
-
     const thumbnailRef = useRef<HTMLDivElement>(null);
 
     const fetchProduct = async () => {
@@ -46,24 +45,48 @@ export const ProductDetailPage = () => {
 
     const handleAddToCart = async (product: Product) => {
         try {
+            // ✅ ตรวจสอบสต็อกก่อน
             if (stock !== null && quantity > stock) {
                 setModalSuccess(false);
                 setModalMessage(`Cannot add ${quantity} items. Only ${stock} left.`);
                 setModalOpen(true);
                 return;
             }
-            await cartService.addOrUpdateItem({ productId: product.id, quantity });
+            console.log("Product product id", product.id);
+            
+            // ✅ ดึง cart ปัจจุบัน
+            const currentCart = await cartService.getCart().catch(() => null);
+            const existingItem = currentCart?.items?.find(
+                (item: any) => item.productId === product.id
+            );
+            console.log("11111111");
+            
+            // ✅ ส่งจำนวนที่ต้องการเพิ่มจริง ๆ (ไม่ใช่จำนวนรวม)
+            await cartService.addOrUpdateItem({
+                productId: Number(product.id),
+                quantity, 
+            });
+            console.log("2222222");
+
             triggerCartUpdated();
 
+            // ✅ แสดงผล modal สำเร็จ
             setModalSuccess(true);
-            setModalMessage("Added product to cart successfully");
+            setModalMessage(
+                existingItem
+                    ? `Added ${quantity} more — now ${existingItem.quantity + quantity} in cart`
+                    : `Added ${quantity} item${quantity > 1 ? "s" : ""} to cart successfully`
+            );
             setModalOpen(true);
         } catch (err: any) {
-            console.log("Error adding to cart:", err.message);
+            console.error("Error adding to cart:", err.message);
 
-            if (err.message.includes("Not enough stock. Available:")) {
+            if (err.message?.includes("Not enough stock")) {
                 setModalSuccess(false);
                 setModalMessage("Cannot add product: quantity exceeds available stock");
+            } else if (err.message?.includes("Cart not found")) {
+                setModalSuccess(false);
+                setModalMessage("Your cart could not be created automatically.");
             } else {
                 setModalSuccess(false);
                 setModalMessage("Cannot add product to cart");
@@ -133,11 +156,10 @@ export const ProductDetailPage = () => {
                                         key={img.id}
                                         src={img.url}
                                         alt={`${product.name}-${idx}`}
-                                        className={`w-20 h-20 object-cover rounded cursor-pointer border flex-shrink-0 transition-all duration-150 ${
-                                            mainImage === img.url
-                                                ? "border-2 border-green-800"
-                                                : "border border-transparent hover:border-gray-400"
-                                        }`}
+                                        className={`w-20 h-20 object-cover rounded cursor-pointer border flex-shrink-0 transition-all duration-150 ${mainImage === img.url
+                                            ? "border-2 border-green-800"
+                                            : "border border-transparent hover:border-gray-400"
+                                            }`}
                                         onClick={() => setMainImage(img.url)}
                                     />
                                 ))}

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../../api/fetch";
 import AdminLayout from "../components/managementLayout";
 import ImageUploader from "../components/imageUploader";
+import { AdminModal } from "../components/adminModal";
 
 interface Category {
   id: number;
@@ -32,29 +33,37 @@ export const UpdateProductPage = () => {
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [images, setImages] = useState<File[]>([]); 
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]); 
-  const [existingImages, setExistingImages] = useState<Product["images"]>([]); 
+  const [images, setImages] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<Product["images"]>([]);
   const [loading, setLoading] = useState(false);
 
+  // ✅ modal state
+  const [modal, setModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+    type: "success" as "success" | "error" | "confirm",
+    onConfirm: undefined as (() => void) | undefined,
+  });
+
   useEffect(() => {
-    // โหลด categories
     api.get("/categories", true).then((res: Category[]) => setCategories(res));
 
-    // โหลดข้อมูลสินค้าเดิม
-    api.get(`/admin-product-management/products/${id}`, true).then((product: Product) => {
-      setForm({
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        stock: product.stock,
-        categoryId: product.categoryId,
+    api
+      .get(`/admin-product-management/products/${id}`, true)
+      .then((product: Product) => {
+        setForm({
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          stock: product.stock,
+          categoryId: product.categoryId,
+        });
+
+        setExistingImages(product.images);
+        setPreviewUrls(product.images.map((img) => img.url));
       });
-      console.log("Form data:", form);
-      
-      setExistingImages(product.images); // เก็บข้อมูลรูปเก่า
-      setPreviewUrls(product.images.map(img => img.url)); // แสดง preview ของรูปเก่า
-    });
   }, [id]);
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -65,18 +74,10 @@ export const UpdateProductPage = () => {
       reader.readAsDataURL(file);
     });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ✅ ขั้นตอนการอัปเดตจริง
+  const performUpdate = async () => {
     setLoading(true);
-
     try {
-      if (!form.name || form.price <= 0 || form.stock < 0 || form.categoryId <= 0) {
-        alert("Please fill all required fields");
-        setLoading(false);
-        return;
-      }
-
-      // แปลง images ใหม่เป็น base64
       const newImages = await Promise.all(
         images.map(async (file, index) => ({
           name: `image-${index}`,
@@ -84,26 +85,66 @@ export const UpdateProductPage = () => {
         }))
       );
 
-      // หารูปเก่าที่ถูกลบ
       const removedImageIds = existingImages
-        .filter(img => !previewUrls.includes(img.url))
-        .map(img => img.id);
+        .filter((img) => !previewUrls.includes(img.url))
+        .map((img) => img.id);
 
       const payload = {
         ...form,
-        addImages: newImages,     
+        addImages: newImages,
         removeImageIds: removedImageIds,
       };
 
       await api.patch(`/admin-product-management/products/${id}`, payload, true);
 
-      alert("Product updated successfully!");
-      navigate("/merchant-listing");
+      setModal({
+        open: true,
+        title: "Product Updated",
+        message: "Your product has been updated successfully!",
+        type: "success",
+        onConfirm: () => {
+          setModal({ ...modal, open: false });
+          navigate("/merchant-listing");
+        },
+      });
     } catch (err: any) {
-      alert(err.message || "Failed to update product");
+      setModal({
+        open: true,
+        title: "Error",
+        message: err.message || "Failed to update product",
+        type: "error",
+        onConfirm: () => setModal({ ...modal, open: false }),
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ แสดง modal ยืนยันก่อนอัปเดต
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form.name || form.price <= 0 || form.stock < 0 || form.categoryId <= 0) {
+      setModal({
+        open: true,
+        title: "Invalid Data",
+        message: "Please fill all required fields before saving.",
+        type: "error",
+        onConfirm: () => setModal({ ...modal, open: false }),
+      });
+      return;
+    }
+
+    setModal({
+      open: true,
+      title: "Confirm Update",
+      message: "Are you sure you want to update this product?",
+      type: "confirm",
+      onConfirm: () => {
+        setModal({ ...modal, open: false });
+        performUpdate();
+      },
+    });
   };
 
   return (
@@ -162,7 +203,9 @@ export const UpdateProductPage = () => {
             <select
               className="flex-1 border p-2 rounded"
               value={form.categoryId}
-              onChange={(e) => setForm({ ...form, categoryId: Number(e.target.value) })}
+              onChange={(e) =>
+                setForm({ ...form, categoryId: Number(e.target.value) })
+              }
               required
             >
               <option value={0}>-- Select Category --</option>
@@ -201,7 +244,17 @@ export const UpdateProductPage = () => {
             </button>
           </div>
         </form>
+
+        {/* ✅ AdminModal */}
+        <AdminModal
+          open={modal.open}
+          title={modal.title}
+          message={modal.message}
+          type={modal.type}
+          onClose={() => setModal({ ...modal, open: false })}
+          onConfirm={modal.onConfirm}
+        />
       </div>
     </AdminLayout>
   );
-}
+};
